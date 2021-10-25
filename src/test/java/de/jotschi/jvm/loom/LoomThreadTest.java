@@ -44,6 +44,30 @@ public class LoomThreadTest {
 	}
 
 	@Test
+	public void testSelectorThreadsViaPlatform() throws InterruptedException, TimeoutException {
+		CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
+		AtomicInteger startCounter = new AtomicInteger();
+		for (int i = 0; i < THREAD_COUNT; i++) {
+			new Thread(() -> {
+				try {
+					System.out.println("Running: " + startCounter.incrementAndGet());
+					latch.countDown();
+					Selector selector = Selector.open();
+					selector.select();
+					Thread.sleep(10_000);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}).start();
+		}
+
+		if (!latch.await(5_000, TimeUnit.MILLISECONDS)) {
+			dumpThreads();
+		}
+		assertEquals("Not all thread did start.", THREAD_COUNT, startCounter.get());
+	}
+
+	@Test
 	public void testSimpleThreads() throws InterruptedException {
 		CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
 		AtomicInteger startCounter = new AtomicInteger();
