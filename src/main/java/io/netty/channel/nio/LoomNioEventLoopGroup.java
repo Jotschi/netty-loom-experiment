@@ -27,6 +27,7 @@ import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.channel.VirtualThreadEventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.LoomRejectedExecutionHandler;
@@ -38,7 +39,7 @@ import io.netty.util.concurrent.RejectedExecutionHandlers;
  * {@link MultithreadEventLoopGroup} implementations which is used for NIO
  * {@link Selector} based {@link Channel}s.
  */
-public class LoomNioEventLoopGroup extends MultithreadEventLoopGroup {
+public class LoomNioEventLoopGroup extends VirtualThreadEventLoopGroup {
 
 
     /**

@@ -38,7 +38,7 @@
 			<version>${netty.version}</version>
 			<optional>true</optional>
 		</dependency>
- -->
+		 -->
 		<!-- Test dependencies -->
 		<dependency>
 			<groupId>junit</groupId>

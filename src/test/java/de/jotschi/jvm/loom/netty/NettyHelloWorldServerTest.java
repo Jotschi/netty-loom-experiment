@@ -1,5 +1,12 @@
 package de.jotschi.jvm.loom.netty;
 
+import java.io.IOException;
+import java.net.ProtocolFamily;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.Pipe;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.spi.AbstractSelector;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.ThreadFactory;
 
 import org.junit.Test;
@@ -24,7 +31,7 @@ public class NettyHelloWorldServerTest {
 
 	static final int PORT = 8080;
 	static final int THREAD_COUNT = 100;
-	
+
 	@Test
 	public void testVirtualThreads() throws InterruptedException {
 		ThreadFactory virtualThreadFactory = new VirtualThreadFactory();
@@ -32,15 +39,58 @@ public class NettyHelloWorldServerTest {
 		EventLoopGroup workerGroup = new LoomNioEventLoopGroup(THREAD_COUNT, virtualThreadFactory);
 		startNetty(bossGroup, workerGroup);
 	}
-	
+
 	@Test
 	public void testCustomEventLoopGroup() throws InterruptedException {
 		ThreadFactory virtualThreadFactory = new VirtualThreadFactory();
 		EventLoopGroup bossGroup = new NioEventLoopGroup(THREAD_COUNT, virtualThreadFactory);
-		EventLoopGroup workerGroup =  new NioEventLoopGroup(THREAD_COUNT, virtualThreadFactory);
+		EventLoopGroup workerGroup = new NioEventLoopGroup(THREAD_COUNT, virtualThreadFactory);
 		startNetty(bossGroup, workerGroup);
 	}
-	
+
+	@Test
+	public void testCustomSelectorProvider() throws InterruptedException {
+		ThreadFactory virtualThreadFactory = new VirtualThreadFactory();
+		SelectorProvider provider = new SelectorProvider() {
+
+			private SelectorProvider selector = SelectorProvider.provider();
+
+			@Override
+			public java.nio.channels.SocketChannel openSocketChannel() throws IOException {
+				return selector.openSocketChannel();
+			}
+
+			@Override
+			public ServerSocketChannel openServerSocketChannel() throws IOException {
+				return selector.openServerSocketChannel();
+			}
+
+			@Override
+			public AbstractSelector openSelector() throws IOException {
+				return selector.openSelector();
+			}
+
+			@Override
+			public Pipe openPipe() throws IOException {
+				return selector.openPipe();
+			}
+
+			@Override
+			public DatagramChannel openDatagramChannel(ProtocolFamily family) throws IOException {
+				return selector.openDatagramChannel(family);
+			}
+
+			@Override
+			public DatagramChannel openDatagramChannel() throws IOException {
+				return selector.openDatagramChannel();
+			}
+		};
+		System.out.println(provider.getClass().getName());
+		EventLoopGroup bossGroup = new LoomNioEventLoopGroup(THREAD_COUNT, virtualThreadFactory, provider);
+		EventLoopGroup workerGroup = new LoomNioEventLoopGroup(THREAD_COUNT, virtualThreadFactory, provider);
+		startNetty(bossGroup, workerGroup);
+	}
+
 	@Test
 	public void testPlatformThreads() throws InterruptedException {
 		EventLoopGroup bossGroup = new NioEventLoopGroup(THREAD_COUNT);
@@ -48,7 +98,7 @@ public class NettyHelloWorldServerTest {
 		startNetty(bossGroup, workerGroup);
 	}
 
-	public void startNetty(EventLoopGroup bossGroup,  EventLoopGroup workerGroup) throws InterruptedException {
+	public void startNetty(EventLoopGroup bossGroup, EventLoopGroup workerGroup) throws InterruptedException {
 		try {
 			ServerBootstrap b = new ServerBootstrap();
 			b.group(bossGroup, workerGroup);

@@ -53,34 +53,23 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Htt
 
 			FullHttpResponse response = new DefaultFullHttpResponse(req.protocolVersion(), OK,
 					Unpooled.wrappedBuffer(CONTENT));
-			CountDownLatch latch = new CountDownLatch(1);
-			Thread.startVirtualThread(() -> {
 
-				// System.out.println(Thread.currentThread().toString());
-				response.headers().set(CONTENT_TYPE, TEXT_PLAIN).setInt(CONTENT_LENGTH,
-						response.content().readableBytes());
+			// System.out.println(Thread.currentThread().toString());
+			response.headers().set(CONTENT_TYPE, TEXT_PLAIN).setInt(CONTENT_LENGTH, response.content().readableBytes());
 
-				if (keepAlive) {
-					if (!req.protocolVersion().isKeepAliveDefault()) {
-						response.headers().set(CONNECTION, KEEP_ALIVE);
-					}
-				} else {
-					// Tell the client we're going to close the connection.
-					response.headers().set(CONNECTION, CLOSE);
+			if (keepAlive) {
+				if (!req.protocolVersion().isKeepAliveDefault()) {
+					response.headers().set(CONNECTION, KEEP_ALIVE);
 				}
+			} else {
+				// Tell the client we're going to close the connection.
+				response.headers().set(CONNECTION, CLOSE);
+			}
 
-				latch.countDown();
-			});
-			try {
-				ChannelFuture f = ctx.write(response);
-				
-				if (!keepAlive) {
-					f.addListener(ChannelFutureListener.CLOSE);
-				}
-				latch.await();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			ChannelFuture f = ctx.write(response);
+
+			if (!keepAlive) {
+				f.addListener(ChannelFutureListener.CLOSE);
 			}
 		}
 	}
