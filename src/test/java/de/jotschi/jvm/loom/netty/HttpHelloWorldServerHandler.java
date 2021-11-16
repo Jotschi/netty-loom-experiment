@@ -8,7 +8,11 @@ import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpHeaderValues.TEXT_PLAIN;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.StructuredExecutor;
+
+import io.netty.buffer.ByteBuf;
 
 /*
  * Copyright 2013 The Netty Project
@@ -38,45 +42,55 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 
 public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<HttpObject> {
-	private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
+  private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
 
-	@Override
-	public void channelReadComplete(ChannelHandlerContext ctx) {
-		ctx.flush();
-	}
+  @Override
+  public void channelReadComplete(ChannelHandlerContext ctx) {
+    ctx.flush();
+  }
 
-	@Override
-	public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
-		if (msg instanceof HttpRequest) {
-			HttpRequest req = (HttpRequest) msg;
-			boolean keepAlive = HttpUtil.isKeepAlive(req);
+  @Override
+  public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws InterruptedException, ExecutionException {
+    if (msg instanceof HttpRequest) {
+      try (var s = StructuredExecutor.open("netty")) {
+        HttpRequest req = (HttpRequest) msg;
+        Future<Boolean> keepAliveFut = s.fork(() -> {
+          return HttpUtil.isKeepAlive(req);
+        });
 
-			FullHttpResponse response = new DefaultFullHttpResponse(req.protocolVersion(), OK,
-					Unpooled.wrappedBuffer(CONTENT));
+        Future<FullHttpResponse> r = s.fork(() -> {
+          ByteBuf contentBuffer = Unpooled.wrappedBuffer(CONTENT);
+          FullHttpResponse response = new DefaultFullHttpResponse(req.protocolVersion(), OK, contentBuffer);
+          // System.out.println(Thread.currentThread().toString());
+          response.headers().set(CONTENT_TYPE, TEXT_PLAIN).setInt(CONTENT_LENGTH, response.content().readableBytes());
 
-			// System.out.println(Thread.currentThread().toString());
-			response.headers().set(CONTENT_TYPE, TEXT_PLAIN).setInt(CONTENT_LENGTH, response.content().readableBytes());
+          return response;
+        });
+        s.join();
 
-			if (keepAlive) {
-				if (!req.protocolVersion().isKeepAliveDefault()) {
-					response.headers().set(CONNECTION, KEEP_ALIVE);
-				}
-			} else {
-				// Tell the client we're going to close the connection.
-				response.headers().set(CONNECTION, CLOSE);
-			}
+        Boolean keepAlive = keepAliveFut.get();
+        FullHttpResponse resp = r.get();
+        if (keepAlive) {
+          if (!req.protocolVersion().isKeepAliveDefault()) {
+            resp.headers().set(CONNECTION, KEEP_ALIVE);
+          }
+        } else {
+          // Tell the client we're going to close the connection.
+          resp.headers().set(CONNECTION, CLOSE);
+        }
 
-			ChannelFuture f = ctx.write(response);
+        ChannelFuture f = ctx.write(r.get());
+        if (!keepAlive) {
+          f.addListener(ChannelFutureListener.CLOSE);
+        }
 
-			if (!keepAlive) {
-				f.addListener(ChannelFutureListener.CLOSE);
-			}
-		}
-	}
+      }
+    }
+  }
 
-	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		cause.printStackTrace();
-		ctx.close();
-	}
+  @Override
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+    cause.printStackTrace();
+    ctx.close();
+  }
 }

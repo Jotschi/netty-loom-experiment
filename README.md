@@ -32,7 +32,11 @@ During my testing I noticed that Netty would not be able to process requests whe
 
 ## Used Versions:
 * Netty Version: [4.1.70.Final-SNAPSHOT@77b7c1a56dcd4fc964137f21caf321a1ca19c0ed](https://github.com/netty/netty/tree/77b7c1a56dcd4fc964137f21caf321a1ca19c0ed)
-* Loom JDK Version - build 18-loom+2-74 - 2022-03-15@860ad0abc98c
-
+* JVM / JDK - Loom EA Build:
+```
+openjdk version "18-loom" 2022-03-15
+OpenJDK Runtime Environment (build 18-loom+5-274)
+OpenJDK 64-Bit Server VM (build 18-loom+5-274, mixed mode, sharing)
+```
 
 

@@ -53,7 +53,7 @@ public abstract class VirtualThreadEventExecutor extends AbstractScheduledEventE
             SystemPropertyUtil.getInt("io.netty.eventexecutor.maxPendingTasks", Integer.MAX_VALUE));
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
+            InternalLoggerFactory.getInstance(VirtualThreadEventExecutor.class);
 
     private static final int ST_NOT_STARTED = 1;
     private static final int ST_STARTED = 2;

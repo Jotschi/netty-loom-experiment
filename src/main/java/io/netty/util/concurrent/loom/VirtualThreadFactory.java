@@ -10,6 +10,7 @@ public class VirtualThreadFactory implements ThreadFactory {
 
 	public Thread newThread(Runnable r) {
 		System.out.format("Creating new thread %d\n", forkCount.incrementAndGet());
-		return factory.newThread(r);
+		Thread t = factory.newThread(r);
+		return t;
 	}
 }
